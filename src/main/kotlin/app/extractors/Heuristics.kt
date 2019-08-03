@@ -246,7 +246,7 @@ object Heuristics
         // to generic content analysis.
         val extractorFactory = HeuristicsMap[file.extension]
         if (extractorFactory != null) {
-            extractor = extractorFactory(buf)
+            extractor = extractorFactory(buf, file.path)
         } else {
             if (XmlRegex.containsMatchIn(buf)) {
                 extractor = CommonExtractor(Lang.XML)
@@ -1144,5 +1144,30 @@ val HeuristicsMap = mapOf<String, (String) -> ExtractorInterface?>(
     },
     "yap" to { _ ->
         CommonExtractor(Lang.PROLOG)
+    }
+    // DevOps
+    "yaml", "yml" to { buf, path ->
+        // GitLab CI - .gitlab-ci.yml
+        // endsWith .gitlab-ci.yml
+
+        // CircleCI - .circleci/config.yaml
+        // endsWith .circleci/config.yaml
+
+        // Kubernetes - *.yaml
+        // Required fields in k8s config:
+        // startsWith apiVersion
+        // startsWith kind
+        // startsWith metadata
+
+        // Travis - .travis.yml
+        // endsWith .travis.yml
+
+        // else null
+    },
+    "Dockerfile" to { _ ->
+        DevopsExtractor(DevopsExtractor.DOCKER)
+    },
+    "Jenkinsfile" to { _ ->
+        DevopsExtractor(DevopsExtractor.JENKINS)
     }
 )
