@@ -15,7 +15,7 @@ import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
-const val LANG_SAMPLES_PATH = "src/test/resources/samples/"
+const val LANG_SAMPLES_PATH = "src/test/resources/samples/langs/"
 
 fun assertLang(file: File, expectedLang: String) {
     val diffFile = DiffFile(
