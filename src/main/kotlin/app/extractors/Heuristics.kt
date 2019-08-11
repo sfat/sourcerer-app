@@ -229,27 +229,13 @@ val XpmRegex = Regex(
     RegexOption.MULTILINE
 )
 
-val heuristicsYaml = { buf: String, path: String ->
-    when {
-        path.endsWith(".gitlab-ci.yml") -> {
-            DevopsExtractor(DevopsExtractor.GITLABCI)
-        }
-        path.endsWith(".travis.yml") -> {
-            DevopsExtractor(DevopsExtractor.TRAVIS)
-        }
-        path.endsWith(".circleci/config.yml") -> {
-            DevopsExtractor(DevopsExtractor.CIRCLECI)
-        }
-        k8sRegex.containsMatchIn(buf) -> {
-            // Kubernetes - *.yaml
-            // Required fields in k8s config:
-            // startsWith apiVersion
-            // startsWith kind
-            // startsWith metadata
-            DevopsExtractor(DevopsExtractor.K8S)
-        }
-        else -> null
-    }
+val k8sExp = { buf: String ->
+    // Required fields in k8s config:
+    // startsWith apiVersion
+    // startsWith kind
+    // startsWith metadata
+    buf.contains("apiVersion") && buf.contains("kind")
+        && buf.contains("metadata")
 }
 
 /**
@@ -1168,9 +1154,38 @@ val HeuristicsMap = mapOf<String, (String, String) -> ExtractorInterface?>(
     "yap" to { _, _ ->
         CommonExtractor(Lang.PROLOG)
     },
-    // DevOps
-    "yaml" to heuristicsYaml,
-    "yml" to heuristicsYaml,
+    // DevOps.
+    "yaml" to { buf, path ->
+        when {
+            k8sExp(buf) -> {
+                DevopsExtractor(DevopsExtractor.K8S)
+            }
+            else -> null
+        }
+    },
+    "yml" to { buf, path ->
+        when {
+            path.endsWith(".gitlab-ci.yml") -> {
+                DevopsExtractor(DevopsExtractor.GITLAB_CI)
+            }
+            path.endsWith(".travis.yml") -> {
+                DevopsExtractor(DevopsExtractor.TRAVIS)
+            }
+            path.endsWith(".circleci/config.yml") -> {
+                DevopsExtractor(DevopsExtractor.CIRCLECI)
+            }
+            path.endsWith(".drone.yml") -> {
+                DevopsExtractor(DevopsExtractor.DRONE)
+            }
+            path.contains(".github/workflows/") -> {
+                DevopsExtractor(DevopsExtractor.GITHUB_ACTIONS)
+            }
+            k8sExp(buf) -> {
+                DevopsExtractor(DevopsExtractor.K8S)
+            }
+            else -> null
+        }
+    },
     "Dockerfile" to { _, _ ->
         DevopsExtractor(DevopsExtractor.DOCKER)
     },
