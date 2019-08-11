@@ -7,6 +7,7 @@ package test.tests.extractors
 import app.model.DiffFile
 import app.model.DiffContent
 import app.extractors.*
+import app.model.DiffRange
 import org.apache.commons.io.FilenameUtils
 import org.eclipse.jgit.diff.DiffEntry.ChangeType
 import org.jetbrains.spek.api.Spek
@@ -26,6 +27,7 @@ fun assertLang(file: File, expectedLang: String) {
         file.path,
         changeType = ChangeType.ADD,
         new = DiffContent(content = file.readLines())
+        // TODO(anatoly): Should we specify ranges here?
     )
     Extractor().extract(listOf(diffFile))
 
@@ -49,20 +51,23 @@ fun assertLang(file: File, expectedLang: String) {
 }
 
 fun assertTech(file: File, expectedTech: String) {
+    val content = file.readLines()
     val diffFile = DiffFile(
         file.path,
         changeType = ChangeType.ADD,
-        new = DiffContent(content = file.readLines())
+        new = DiffContent(
+            content = content,
+            ranges = listOf(DiffRange(start = 0, end = content.size))
+        )
     )
+
     val stats = Extractor().extract(listOf(diffFile))
 
-    println(stats.toString())
-
-    assertFalse {
-        stats.isNotEmpty()
+    assertFalse("No stats for $file") {
+        stats.isEmpty()
     }
 
-    assertTrue {
+    assertTrue("Wrong type for $file") {
         stats.first().type == ExtractorInterface.TYPE_LIBRARY
     }
 
@@ -86,8 +91,21 @@ class HeuristicsTest : Spek({
         it("all devops samples") {
             for (dir in File(DEVOPS_SAMPLES_PATH).listFiles()) {
                 val expectedTech = DevopsExtractor.DEVOPS + dir.name
+
                 for (file in dir.walkTopDown()) {
-                    if (file.isFile) assertTech(file, expectedTech)
+                    if (!file.isFile) continue
+
+                    var skip = false
+                    for (wc in ignoredSamplesWildcards) {
+                        if (FilenameUtils.wildcardMatchOnSystem(file.path,
+                                wc)) {
+                            skip = true
+                            break
+                        }
+                    }
+                    if (skip) break
+
+                    assertTech(file, expectedTech)
                 }
             }
         }
