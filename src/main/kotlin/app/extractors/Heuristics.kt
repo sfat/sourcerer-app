@@ -230,10 +230,7 @@ val XpmRegex = Regex(
 )
 
 val k8sExp = { buf: String ->
-    // Required fields in k8s config:
-    // startsWith apiVersion
-    // startsWith kind
-    // startsWith metadata
+    // Required fields in k8s config: apiVersion, kind, metadata.
     buf.contains("apiVersion") && buf.contains("kind")
         && buf.contains("metadata")
 }
@@ -1155,7 +1152,7 @@ val HeuristicsMap = mapOf<String, (String, String) -> ExtractorInterface?>(
         CommonExtractor(Lang.PROLOG)
     },
     // DevOps.
-    "yaml" to { buf, path ->
+    "yaml" to { buf, _ ->
         when {
             k8sExp(buf) -> {
                 DevopsExtractor(DevopsExtractor.K8S)
@@ -1180,6 +1177,14 @@ val HeuristicsMap = mapOf<String, (String, String) -> ExtractorInterface?>(
             path.contains(".github/workflows/") -> {
                 DevopsExtractor(DevopsExtractor.GITHUB_ACTIONS)
             }
+            k8sExp(buf) -> {
+                DevopsExtractor(DevopsExtractor.K8S)
+            }
+            else -> null
+        }
+    },
+    "json" to { buf, _ ->
+        when {
             k8sExp(buf) -> {
                 DevopsExtractor(DevopsExtractor.K8S)
             }
